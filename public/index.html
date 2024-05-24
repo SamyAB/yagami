@@ -1,0 +1,30 @@
+<html>
+
+<head>
+  <script src="https://unpkg.com/htmx.org@1.9.12"
+    integrity="sha384-ujb1lZYygJmzgSwoxRggbCHcjc0rB2XoQrxeTUQyRjrOnlCoYta87iKBWq3EsdM2"
+    crossorigin="anonymous"></script>
+
+  <style type="text/css">
+    body,
+    html {
+      height: 100%;
+      margin: 0;
+    }
+
+    .container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      height: 100vh;
+      width: 100vw;
+    }
+  </style>
+</head>
+
+<body hx-get="/bulb" hx-target="#image" hx-trigger="load">
+  <div hx-post="/bulb" hx-target="this" id="image"></div>
+</body>
+
+</html>
