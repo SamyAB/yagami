@@ -1,0 +1,15 @@
+[Unit]
+Description=Light Yagami
+After=network.target
+StartLimitIntervalSec=0
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=1
+User=samy
+EnvironmentFile=/var/lib/yagami/yagami.env
+ExecStart=/usr/bin/yagami
+
+[Install]
+WantedBy=multi-user.target

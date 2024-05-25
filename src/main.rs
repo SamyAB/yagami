@@ -1,4 +1,4 @@
-use std::env;
+use std::{env, path::PathBuf};
 
 use axum::{extract::State, http::StatusCode, response::Html, routing::get, Router};
 use reqwest::header;
@@ -46,6 +46,9 @@ async fn main() {
         .init();
 
     let client = create_reqwest_client();
+    let public_path = PathBuf::from(
+        env::var("YAGAMI_PUBLIC_PATH").unwrap_or(String::from("/var/lib/yagami/public")),
+    );
 
     let app = Router::new()
         .route("/", get(index))
@@ -53,18 +56,19 @@ async fn main() {
         .route("/alive", get(alive))
         .route_service(
             "/bulbon",
-            ServeFile::new("/home/samy/workspace/perso/yagami/public/on.png"),
+            ServeFile::new(format!("{}/on.png", public_path.to_string_lossy())),
         )
         .route_service(
             "/bulboff",
-            ServeFile::new("/home/samy/workspace/perso/yagami/public/off.png"),
+            ServeFile::new(format!("{}/off.png", public_path.to_string_lossy())),
         )
         .layer(TraceLayer::new_for_http())
         .with_state(client);
 
-    let listener = tokio::net::TcpListener::bind("0.0.0.0:3000")
+    let port = env::var("YAGAMI_PORT").unwrap_or(String::from("2802"));
+    let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
         .await
-        .unwrap_or_else(|_| panic!("Could not listen on port 3000"));
+        .unwrap_or_else(|_| panic!("Could not listen on port {port}"));
     tracing::info!(
         "Listening on {}",
         listener
