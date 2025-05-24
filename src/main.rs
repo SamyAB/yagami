@@ -6,9 +6,9 @@ use serde::{Deserialize, Serialize};
 use tower_http::{services::ServeFile, trace::TraceLayer};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-const BULB_ON_DIV: &'static str = "<div class='container' style='background-color:#F5DEB3;'><img alt='Lightbulb on' src='/bulbon'/></div>";
-const BULB_OFF_DIV: &'static str = "<div class='container' style='background-color:black;'><img alt='Lightbulb off' src='/bulboff'/></div>";
-const RYM_OFFICE_LIGHT_ID: &'static str = "light.interupteur_bureau_rym_commutateur";
+const BULB_ON_DIV: &str = "<div class='container' style='background-color:#F5DEB3;'><img alt='Lightbulb on' src='/bulbon'/></div>";
+const BULB_OFF_DIV: &str = "<div class='container' style='background-color:black;'><img alt='Lightbulb off' src='/bulboff'/></div>";
+const RYM_OFFICE_LIGHT_ID: &str = "light.interupteur_bureau_rym_commutateur";
 
 #[derive(Deserialize, Debug, Serialize)]
 struct LightState {
@@ -75,9 +75,29 @@ async fn main() {
             .local_addr()
             .expect("We should be able to get the URL we are listening on")
     );
-    axum::serve(listener, app)
-        .await
-        .expect("This shouls run untill the end of the program");
+
+    // Notify systemd that the service is ready if running under systemd
+    let is_systemd = env::var("NOTIFY_SOCKET").is_ok();
+    if is_systemd {
+        tokio::spawn(async move {
+            axum::serve(listener, app)
+                .await
+                .expect("This should run until the end of the program");
+        });
+
+        // Send notification to systemd
+        let _ = tokio::process::Command::new("systemctl")
+            .arg("--no-pager")
+            .arg("--no-ask-password")
+            .arg("notify")
+            .arg("READY=1")
+            .status()
+            .await;
+    } else {
+        axum::serve(listener, app)
+            .await
+            .expect("This should run until the end of the program");
+    }
 }
 
 async fn index() -> Html<&'static str> {
@@ -102,7 +122,7 @@ async fn get_state(State(client): State<reqwest::Client>) -> (StatusCode, &'stat
         .await
         .expect("Should contain something");
 
-    if current_state.state == String::from("on") {
+    if current_state.state == *"on" {
         (StatusCode::OK, BULB_ON_DIV)
     } else {
         (StatusCode::OK, BULB_OFF_DIV)
@@ -127,7 +147,7 @@ async fn swap_state(State(client): State<reqwest::Client>) -> (StatusCode, &'sta
         entity_id: String::from(RYM_OFFICE_LIGHT_ID),
     };
 
-    if current_state.state == String::from("on") {
+    if current_state.state == *"on" {
         let response = client
             .post("http://192.168.1.108:8123/api/services/light/turn_off")
             .json(&light)

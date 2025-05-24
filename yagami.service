@@ -1,15 +1,18 @@
 [Unit]
 Description=Light Yagami
-After=network.target
+After=network.target network-online.target
 StartLimitIntervalSec=0
 
 [Service]
-Type=simple
+Type=notify
 Restart=always
 RestartSec=1
 User=samy
 EnvironmentFile=/var/lib/yagami/yagami.env
 ExecStart=/usr/bin/yagami
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
 
 [Install]
 WantedBy=multi-user.target
