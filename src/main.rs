@@ -180,3 +180,21 @@ async fn swap_state(
         (response.status(), BULB_ON_DIV)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_index() {
+        let response = index().await;
+        assert!(response.0.contains("bulb"));
+    }
+
+    #[tokio::test]
+    async fn test_alive() {
+        let response = alive().await;
+        assert_eq!(response.0, StatusCode::OK);
+        assert_eq!(response.1, "yagami is alive!");
+    }
+}

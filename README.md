@@ -1,6 +1,7 @@
 # Yagami
 
 ![Format and Lints](https://github.com/SamyAB/yagami/actions/workflows/ci.yml/badge.svg)
+![Tests](https://github.com/SamyAB/yagami/actions/workflows/test.yml/badge.svg)
 
 A simple web page to control a single light.
 
