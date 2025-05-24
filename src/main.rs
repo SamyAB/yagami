@@ -8,7 +8,6 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 const BULB_ON_DIV: &str = "<div class='container' style='background-color:#F5DEB3;'><img alt='Lightbulb on' src='/bulbon'/></div>";
 const BULB_OFF_DIV: &str = "<div class='container' style='background-color:black;'><img alt='Lightbulb off' src='/bulboff'/></div>";
-const RYM_OFFICE_LIGHT_ID: &str = "light.interupteur_bureau_rym_commutateur";
 
 #[derive(Deserialize, Debug, Serialize)]
 struct LightState {
@@ -50,6 +49,9 @@ async fn main() {
         env::var("YAGAMI_PUBLIC_PATH").unwrap_or(String::from("/var/lib/yagami/public")),
     );
 
+    // Read LIGHT_ID once at startup
+    let light_id = env::var("LIGHT_ID").expect("LIGHT_ID should be set");
+
     let app = Router::new()
         .route("/", get(index))
         .route("/bulb", get(get_state).post(swap_state))
@@ -63,7 +65,7 @@ async fn main() {
             ServeFile::new(format!("{}/off.png", public_path.to_string_lossy())),
         )
         .layer(TraceLayer::new_for_http())
-        .with_state(client);
+        .with_state((client, light_id));
 
     let port = env::var("YAGAMI_PORT").unwrap_or(String::from("2802"));
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
@@ -109,12 +111,12 @@ async fn alive() -> (StatusCode, &'static str) {
     (StatusCode::OK, "yagami is alive!")
 }
 
-async fn get_state(State(client): State<reqwest::Client>) -> (StatusCode, &'static str) {
+async fn get_state(
+    State((client, light_id)): State<(reqwest::Client, String)>,
+) -> (StatusCode, &'static str) {
     tracing::info!("get state");
     let current_state: LightState = client
-        .get(format!(
-            "http://192.168.1.108:8123/api/states/{RYM_OFFICE_LIGHT_ID}"
-        ))
+        .get(format!("http://192.168.1.108:8123/api/states/{}", light_id))
         .send()
         .await
         .expect("We should have a response")
@@ -129,13 +131,13 @@ async fn get_state(State(client): State<reqwest::Client>) -> (StatusCode, &'stat
     }
 }
 
-async fn swap_state(State(client): State<reqwest::Client>) -> (StatusCode, &'static str) {
+async fn swap_state(
+    State((client, light_id)): State<(reqwest::Client, String)>,
+) -> (StatusCode, &'static str) {
     tracing::info!("set state");
 
     let current_state: LightState = client
-        .get(format!(
-            "http://192.168.1.108:8123/api/states/{RYM_OFFICE_LIGHT_ID}"
-        ))
+        .get(format!("http://192.168.1.108:8123/api/states/{}", light_id))
         .send()
         .await
         .expect("We should have a response")
@@ -144,7 +146,7 @@ async fn swap_state(State(client): State<reqwest::Client>) -> (StatusCode, &'sta
         .expect("Should contain something");
 
     let light = Entity {
-        entity_id: String::from(RYM_OFFICE_LIGHT_ID),
+        entity_id: light_id,
     };
 
     if current_state.state == *"on" {
