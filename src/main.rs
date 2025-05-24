@@ -49,8 +49,9 @@ async fn main() {
         env::var("YAGAMI_PUBLIC_PATH").unwrap_or(String::from("/var/lib/yagami/public")),
     );
 
-    // Read LIGHT_ID once at startup
     let light_id = env::var("LIGHT_ID").expect("LIGHT_ID should be set");
+    let home_assistant_url =
+        env::var("HOME_ASSISTANT_URL").expect("HOME_ASSISTANT_URL should be set");
 
     let app = Router::new()
         .route("/", get(index))
@@ -65,7 +66,7 @@ async fn main() {
             ServeFile::new(format!("{}/off.png", public_path.to_string_lossy())),
         )
         .layer(TraceLayer::new_for_http())
-        .with_state((client, light_id));
+        .with_state((client, light_id, home_assistant_url));
 
     let port = env::var("YAGAMI_PORT").unwrap_or(String::from("2802"));
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{port}"))
@@ -112,11 +113,14 @@ async fn alive() -> (StatusCode, &'static str) {
 }
 
 async fn get_state(
-    State((client, light_id)): State<(reqwest::Client, String)>,
+    State((client, light_id, home_assistant_url)): State<(reqwest::Client, String, String)>,
 ) -> (StatusCode, &'static str) {
     tracing::info!("get state");
     let current_state: LightState = client
-        .get(format!("http://192.168.1.108:8123/api/states/{}", light_id))
+        .get(format!(
+            "http://{}/api/states/{}",
+            home_assistant_url, light_id
+        ))
         .send()
         .await
         .expect("We should have a response")
@@ -132,12 +136,15 @@ async fn get_state(
 }
 
 async fn swap_state(
-    State((client, light_id)): State<(reqwest::Client, String)>,
+    State((client, light_id, home_assistant_url)): State<(reqwest::Client, String, String)>,
 ) -> (StatusCode, &'static str) {
     tracing::info!("set state");
 
     let current_state: LightState = client
-        .get(format!("http://192.168.1.108:8123/api/states/{}", light_id))
+        .get(format!(
+            "http://{}/api/states/{}",
+            home_assistant_url, light_id
+        ))
         .send()
         .await
         .expect("We should have a response")
@@ -151,7 +158,10 @@ async fn swap_state(
 
     if current_state.state == *"on" {
         let response = client
-            .post("http://192.168.1.108:8123/api/services/light/turn_off")
+            .post(format!(
+                "http://{}/api/services/light/turn_off",
+                home_assistant_url
+            ))
             .json(&light)
             .send()
             .await
@@ -159,7 +169,10 @@ async fn swap_state(
         (response.status(), BULB_OFF_DIV)
     } else {
         let response = client
-            .post("http://192.168.1.108:8123/api/services/light/turn_on")
+            .post(format!(
+                "http://{}/api/services/light/turn_on",
+                home_assistant_url
+            ))
             .json(&light)
             .send()
             .await

@@ -13,9 +13,10 @@ A simple web page to control a single light.
 
 The following env vars need to be set:
 
-- `LIGHT_ID`=`<home assistant light ID. Eg: light.foobar>`
+- `LIGHT_ID`=`<home assistant light ID, eg: light.foobar>`
 - `YAGAMI_TOKEN`=`<home assistant API token>`
 - `YAGAMI_PUBLIC_PATH`=`<path to the directory that contains html file and images>`
+- `HOME_ASSISTANT_URL`=`<base URL of home assistant server, eg: 192.168.1.1:8123>`
 
 ## Building from source
 
