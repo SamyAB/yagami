@@ -1,6 +1,6 @@
 use std::{env, path::PathBuf};
 
-use axum::{extract::State, http::StatusCode, response::Html, routing::get, Router};
+use axum::{Router, extract::State, http::StatusCode, response::Html, routing::get};
 use reqwest::header;
 use serde::{Deserialize, Serialize};
 use tower_http::{services::ServeFile, trace::TraceLayer};
@@ -117,10 +117,7 @@ async fn get_state(
 ) -> (StatusCode, &'static str) {
     tracing::info!("get state");
     let current_state: LightState = client
-        .get(format!(
-            "http://{}/api/states/{}",
-            home_assistant_url, light_id
-        ))
+        .get(format!("http://{home_assistant_url}/api/states/{light_id}"))
         .send()
         .await
         .expect("We should have a response")
@@ -141,10 +138,7 @@ async fn swap_state(
     tracing::info!("set state");
 
     let current_state: LightState = client
-        .get(format!(
-            "http://{}/api/states/{}",
-            home_assistant_url, light_id
-        ))
+        .get(format!("http://{home_assistant_url}/api/states/{light_id}"))
         .send()
         .await
         .expect("We should have a response")
@@ -159,8 +153,7 @@ async fn swap_state(
     if current_state.state == *"on" {
         let response = client
             .post(format!(
-                "http://{}/api/services/light/turn_off",
-                home_assistant_url
+                "http://{home_assistant_url}/api/services/light/turn_off"
             ))
             .json(&light)
             .send()
@@ -170,8 +163,7 @@ async fn swap_state(
     } else {
         let response = client
             .post(format!(
-                "http://{}/api/services/light/turn_on",
-                home_assistant_url
+                "http://{home_assistant_url}/api/services/light/turn_on"
             ))
             .json(&light)
             .send()

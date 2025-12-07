@@ -44,7 +44,7 @@ cargo run --release
 
 ## Systemd service
 
-A systemd unit file, `yagami.service`, is provided to run yagami as a service.
+A Systemd unit file, `yagami.service`, is provided to run yagami as a service.
 
 To use it:
 
